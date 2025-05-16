@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp, useNavigation, useRoute }                 from '@react-navigation/native';
+import { NativeStackNavigationProp }                          from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { CurrencyItem } from '../types/currency';
 
@@ -12,12 +12,16 @@ const currencies: CurrencyItem[] = [
 ];
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SelectCurrency'>;
+type RouteType = RouteProp<RootStackParamList, 'SelectCurrency'>;
 
 export default function CurrencySelectionScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<RouteType>();
+  const { type, onSelect } = route.params;
 
   const handleSelect = (currency: CurrencyItem) => {
-    navigation.navigate('Converter', { selectedCurrency: currency });
+    onSelect(currency);
+    navigation.goBack();
   };
 
   return (
