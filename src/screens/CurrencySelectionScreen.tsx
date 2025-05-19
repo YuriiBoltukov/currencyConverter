@@ -1,6 +1,6 @@
-import React                                                                     from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { RouteProp, useNavigation, useRoute }                                    from '@react-navigation/native';
+import React, { useState }                                                                  from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
+import { RouteProp, useNavigation, useRoute }                                               from '@react-navigation/native';
 import { NativeStackNavigationProp }                          from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useExchangeRates } from '../hooks/useExchangeRates';
@@ -21,8 +21,11 @@ type CurrencyValue = {
 export default function CurrencySelectionScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteType>();
+
+  const [searchQuery, setSearchQuery] = useState('');
+
   const { type } = route.params;
-  const { setFromCurrency, setToCurrency } = useCurrencyContext();
+  const { fromCurrency, toCurrency, setFromCurrency, setToCurrency } = useCurrencyContext();
 
   const { currencies, loading, error } = useExchangeRates();
 
@@ -60,6 +63,7 @@ export default function CurrencySelectionScreen() {
     );
   }
   const currencyList= Object.entries(currencies) as unknown as [string, CurrencyValue][];
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -68,16 +72,32 @@ export default function CurrencySelectionScreen() {
       </View>
     );
   }
+
   const formattedCurrency: FormattedData[] = currencyList.map(([key, value]: [string, CurrencyValue]) => ({
     key,
     ...value,
-  }))
+  }));
+
+  const filteredCurrency = formattedCurrency.filter((item) =>
+    item.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <View style={styles.container}>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Поиск валюты"
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
       <FlatList
-        data={formattedCurrency}
+        data={filteredCurrency}
         renderItem={(item) => (
-          <TouchableOpacity onPress={() => handleSelect(item.item.symbol, item.item.name)} style={styles.item}>
+          <TouchableOpacity onPress={() => handleSelect(item.item.symbol, item.item.name)} style={[
+            styles.item,
+            (type === 'from' ? fromCurrency?.code : toCurrency?.code) === item.item.symbol && styles.selectedItem,
+          ]}>
             <Text style={styles.text}>{item.item.symbol} - {item.item.name}</Text>
           </TouchableOpacity>
         )}
@@ -98,5 +118,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 8,
+    margin: 12,
+  },
+
+  selectedItem: {
+    backgroundColor: '#d0e8ff',
   },
 });
