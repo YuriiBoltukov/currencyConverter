@@ -1,11 +1,20 @@
 import React, { useState }                                                                  from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  TextInput,
+  Image,
+} from 'react-native';
 import { RouteProp, useNavigation, useRoute }                                               from '@react-navigation/native';
 import { NativeStackNavigationProp }                          from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useExchangeRates } from '../hooks/useExchangeRates';
 import { useCurrencyContext } from '../context/CurrencyContext';
-
+import { currencyToCountryMap } from '../utils/currencyCountryMap';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SelectCurrency'>;
 type RouteType = RouteProp<RootStackParamList, 'SelectCurrency'>;
 type FormattedData = {
@@ -83,6 +92,13 @@ export default function CurrencySelectionScreen() {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const getFlagUrl = (currencyCode: string): string => {
+    const countryCode = currencyToCountryMap[currencyCode];
+    return countryCode
+      ? `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`
+      : '';
+  };
+
   return (
     <View style={styles.container}>
       <TextInput
@@ -98,6 +114,10 @@ export default function CurrencySelectionScreen() {
             styles.item,
             (type === 'from' ? fromCurrency?.code : toCurrency?.code) === item.item.symbol && styles.selectedItem,
           ]}>
+            <Image
+              source={{ uri: getFlagUrl(item.item.symbol) }}
+              style={{ width: 30, height: 20, marginRight: 10 }}
+            />
             <Text style={styles.text}>{item.item.symbol} - {item.item.name}</Text>
           </TouchableOpacity>
         )}
