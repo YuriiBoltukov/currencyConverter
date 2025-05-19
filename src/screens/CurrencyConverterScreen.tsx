@@ -1,45 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Button, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../types/navigation';
-import { CurrencyItem } from '../types/currency';
+import { useExchangeRates }   from '../hooks/useExchangeRates';
+import { useCurrencyContext } from '../context/CurrencyContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Converter'>;
-type RouteType = RouteProp<RootStackParamList, 'Converter'>;
 
 export default function CurrencyConverterScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<RouteType>();
 
   const [amount, setAmount] = useState<string>('1');
-  const [fromCurrency, setFromCurrency] = useState<CurrencyItem | null>(null);
-  const [toCurrency, setToCurrency] = useState<CurrencyItem | null>(null);
   const [result, setResult] = useState<number | null>(null);
+  const { rates } = useExchangeRates();
+  const { fromCurrency, toCurrency, setFromCurrency, setToCurrency } = useCurrencyContext();
 
   const openCurrencySelection = (type: 'from' | 'to') => {
-    navigation.navigate('SelectCurrency', {
-      type,
-      onSelect: (currency: CurrencyItem) => {
-        if (type === 'from') setFromCurrency(currency);
-        else setToCurrency(currency);
-      },
-    });
+    navigation.navigate('SelectCurrency', { type });
   };
 
   const convert = () => {
-    const rate = 1.08;
-    const amountNum = parseFloat(amount);
-    if (!isNaN(amountNum)) {
-      setResult(amountNum * rate);
+    if (!rates || !fromCurrency || !toCurrency) return;
+
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount)) return;
+
+    const fromRate = rates[fromCurrency.code];
+    const toRate = rates[toCurrency.code];
+
+    if (!fromRate || !toRate) {
+      console.error('Одна из валют не найдена в курсах:', fromCurrency.code, toCurrency.code);
+      return;
     }
+
+    const resultValue = (toRate / fromRate) * numericAmount;
+
+    setResult(resultValue);
   };
 
   const swapCurrencies = () => {
-    setFromCurrency(toCurrency);
-    setToCurrency(fromCurrency);
-    setResult(null);
+    if (fromCurrency && toCurrency) {
+      setFromCurrency(toCurrency);
+      setToCurrency(fromCurrency);
+      setResult(null);
+    }
   };
 
   return (
@@ -54,14 +60,14 @@ export default function CurrencyConverterScreen() {
 
       <View style={styles.row}>
         <Button
-          title={fromCurrency ? `From: ${fromCurrency.code}` : 'Select currency "From"'}
+          title={fromCurrency ? `From: ${fromCurrency.symbol}` : 'Select currency "From"'}
           onPress={() => openCurrencySelection('from')}
         />
         <TouchableOpacity onPress={swapCurrencies} style={styles.swapButton}>
           <Text style={styles.swapText}>⇄</Text>
         </TouchableOpacity>
         <Button
-          title={toCurrency ? `To: ${toCurrency.code}` : 'Select currency "To"'}
+          title={toCurrency ? `To: ${toCurrency.symbol}` : 'Select currency "To"'}
           onPress={() => openCurrencySelection('to')}
         />
       </View>
@@ -70,7 +76,7 @@ export default function CurrencyConverterScreen() {
 
       {result !== null && (
         <Text style={styles.result}>
-          {amount} {fromCurrency?.code} = {result.toFixed(2)} {toCurrency?.code}
+          {amount} {fromCurrency?.symbol} = {result.toFixed(2)} {toCurrency?.symbol}
         </Text>
       )}
     </View>
