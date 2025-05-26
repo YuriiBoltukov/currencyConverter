@@ -22,15 +22,22 @@ export default function CurrencyConverterScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [amount, setAmount] = useState<string>('1');
   const [result, setResult] = useState<number | null>(null);
-  const { rates } = useExchangeRates();
   const {
     fromCurrency,
     toCurrency,
     setFromCurrency,
     setToCurrency,
   } = useCurrencyContext();
-
+  const { rates, loading } = useExchangeRates(fromCurrency?.code || null);
   const { convertCurrency } = useCurrencyConversion(rates);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading exchange rates...</Text>
+      </View>
+    );
+  }
 
   // Memoized function to handle currency swap
   const handleSwapCurrencies = useCallback(() => {
