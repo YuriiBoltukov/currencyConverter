@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CurrenciesResponse }  from '../types/currency';
 
 const BASE_URL = 'https://api.vatcomply.com';
 const STORAGE_KEY_RATES = 'exchange_rates';
 const STORAGE_KEY_CURRENCIES = 'currencies_list';
-
-export interface CurrenciesResponse {
-  [code: string]: string;
-}
 
 export interface RatesResponse {
   rates: Record<string, number>;
@@ -45,7 +42,7 @@ export function useExchangeRates() {
         await AsyncStorage.setItem(STORAGE_KEY_RATES, JSON.stringify(ratesRes.data.rates));
         await AsyncStorage.setItem(STORAGE_KEY_CURRENCIES, JSON.stringify(currenciesRes.data));
       } catch (e: any) {
-        setError(e.message || 'Ошибка загрузки данных');
+        setError(e.message || 'Error loading data');
       } finally {
         setLoading(false);
       }

@@ -1,31 +1,18 @@
-import React, { useState }                                                                  from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  TextInput,
-  Image,
-} from 'react-native';
-import { RouteProp, useNavigation, useRoute }                                               from '@react-navigation/native';
+import React, { useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Image } from 'react-native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp }                          from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useExchangeRates } from '../hooks/useExchangeRates';
 import { useCurrencyContext } from '../context/CurrencyContext';
-import { currencyToCountryMap } from '../utils/currencyCountryMap';
+
+import { Feather } from '@expo/vector-icons';
+import { getFlagUrl } from '../utils/getFlagUrl';
+import { getCurrencySymbol }                from '../utils/getCurrencySymbol';
+import { CurrencyValue, FormattedCurrency } from '../types/currency';
+
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SelectCurrency'>;
 type RouteType = RouteProp<RootStackParamList, 'SelectCurrency'>;
-type FormattedData = {
-  key: string;
-  name: string;
-  symbol: string;
-}
-type CurrencyValue = {
-  name: string;
-  symbol: string;
-};
 
 export default function CurrencySelectionScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -42,96 +29,97 @@ export default function CurrencySelectionScreen() {
     const selected = {
       code,
       name,
-      symbol: getSymbolForCurrency(code),
+      symbol: getCurrencySymbol(code),
     };
 
     if (type === 'from') setFromCurrency(selected);
     else setToCurrency(selected);
-
     navigation.goBack();
   };
-
-  const getSymbolForCurrency = (symbol: string): string => {
-    const symbols: Record<string, string> = {
-      USD: '$',
-      EUR: '€',
-      GBP: '£',
-      RUB: '₽',
-      JPY: '¥',
-    };
-
-    return symbols[symbol] || symbol;
-  };
-
-  if (error || !currencies) {
-    return (
-      <View style={styles.center}>
-        <Text>Ошибка загрузки валют</Text>
-        <Text>{error}</Text>
-      </View>
-    );
-  }
-  const currencyList= Object.entries(currencies) as unknown as [string, CurrencyValue][];
 
   if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text>Загрузка валют...</Text>
+        <Text>Loading currencies...</Text>
       </View>
     );
   }
 
-  const formattedCurrency: FormattedData[] = currencyList.map(([key, value]: [string, CurrencyValue]) => ({
-    key,
+  if (error || !currencies) {
+    return (
+      <View style={styles.center}>
+        <Text>Error loading currencies</Text>
+        <Text>{error}</Text>
+      </View>
+    );
+  }
+  const currencyList= Object.entries(currencies) as unknown as [string, FormattedCurrency][];
+
+
+
+  const formattedCurrency: FormattedCurrency[] = currencyList.map(([code, value]: [string, CurrencyValue]) => ({
+    code,
     ...value,
   }));
 
-  const filteredCurrency = formattedCurrency.filter((item) =>
+  const filteredCurrency: FormattedCurrency[] = formattedCurrency.filter((item: FormattedCurrency) =>
     item.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getFlagUrl = (currencyCode: string): string => {
-    const countryCode = currencyToCountryMap[currencyCode];
-    return countryCode
-      ? `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`
-      : '';
-  };
-
   return (
     <View style={styles.container}>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Поиск валюты"
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
+      <View style={styles.searchWrapper}>
+        <Feather name="search" size={18} color="#888" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search currency..."
+        />
+      </View>
       <FlatList
         data={filteredCurrency}
-        renderItem={(item) => (
-          <TouchableOpacity onPress={() => handleSelect(item.item.symbol, item.item.name)} style={[
-            styles.item,
-            (type === 'from' ? fromCurrency?.code : toCurrency?.code) === item.item.symbol && styles.selectedItem,
-          ]}>
-            <Image
-              source={{ uri: getFlagUrl(item.item.symbol) }}
-              style={{ width: 30, height: 20, marginRight: 10 }}
-            />
-            <Text style={styles.text}>{item.item.symbol} - {item.item.name}</Text>
-          </TouchableOpacity>
-        )}
+        style={styles.listContainer}
+        renderItem={({ item }) => {
+          const isSelected = (type === 'from' ? fromCurrency?.code : toCurrency?.code) === item.symbol;
+
+          return (
+            <TouchableOpacity
+              onPress={() => handleSelect(item.symbol, item.name)}
+              style={[styles.item, isSelected && styles.selectedItem]}
+            >
+              <View style={styles.itemContent}>
+                <Image
+                  source={{ uri: getFlagUrl(item.symbol) }}
+                  style={styles.flag}
+                />
+                <Text style={styles.text}>
+                  {item.symbol} - {item.name}
+                </Text>
+              </View>
+
+              <View style={styles.radioOuter}>
+                {isSelected && <View style={styles.radioInner} />}
+              </View>
+            </TouchableOpacity>
+          );
+        }}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f5', borderRadius: 8 },
   item: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+    marginBottom: 8,
+    borderRadius: 8,
   },
   text: { fontSize: 16 },
   center: {
@@ -139,15 +127,62 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 8,
+
+  selectedItem: {
+    backgroundColor: '#dedede',
+  },
+  itemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  listContainer: {
+    backgroundColor: '#e7e7e7',
+    borderRadius: 8
+  },
+  flag: {
+    width: 30,
+    height: 20,
+    marginRight: 10,
+    borderRadius: 2,
+  },
+
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#000',
+  },
+  searchWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
     margin: 12,
   },
 
-  selectedItem: {
-    backgroundColor: '#d0e8ff',
+  searchIcon: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 1,
+  },
+
+  searchInput: {
+    paddingLeft: 36,
+    borderWidth: 1,
+    borderColor: '#000',
+    borderRadius: 8,
+    fontSize: 16,
+    paddingVertical: 12,
+    paddingRight: 16,
+    color: '#000',
+    backgroundColor: '#FFF',
   },
 });

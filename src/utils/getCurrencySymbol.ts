@@ -1,0 +1,37 @@
+// Returns currency symbol or fallback to code
+export const getCurrencySymbol = (code: string): string => {
+  const symbols: Record<string, string> = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    RUB: '₽',
+    JPY: '¥',
+    AUD: 'A$',
+    BRL: 'R$',
+    CAD: 'C$',
+    CHF: 'CHF',
+    CNY: '¥',
+    CZK: 'Kč',
+    DKK: 'kr',
+    HKD: 'HK$',
+    HUF: 'Ft',
+    IDR: 'Rp',
+    ILS: '₪',
+    INR: '₹',
+    ISK: 'kr',
+    KRW: '₩',
+    MXN: 'Mex$',
+    MYR: 'RM',
+    NOK: 'kr',
+    NZD: 'NZ$',
+    PHP: '₱',
+    PLN: 'zł',
+    RON: 'lei',
+    SEK: 'kr',
+    SGD: 'S$',
+    THB: '฿',
+    TRY: '₺',
+    ZAR: 'R',
+  };
+  return symbols[code] || code;
+};

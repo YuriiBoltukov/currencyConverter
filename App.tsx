@@ -14,7 +14,7 @@ export default function App() {
       <NavigationContainer>
         <Stack.Navigator>
           <Stack.Screen name="Converter" component={CurrencyConverterScreen} />
-          <Stack.Screen name="SelectCurrency" component={CurrencySelectionScreen} />
+          <Stack.Screen name="SelectCurrency" options={{ title: 'Currency Select' }} component={CurrencySelectionScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </CurrencyProvider>

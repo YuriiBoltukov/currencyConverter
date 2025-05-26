@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,7 +12,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useExchangeRates } from '../hooks/useExchangeRates';
 import { useCurrencyContext } from '../context/CurrencyContext';
-import { currencyToCountryMap } from '../utils/currencyCountryMap';
+import { useCurrencyConversion } from '../hooks/useCurrencyConversion';
+import CurrencyButton from '../components/CurrencyButton';
+import { sanitizeAmount } from '../utils/sanitizeAmount';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Converter'>;
 
@@ -22,92 +23,67 @@ export default function CurrencyConverterScreen() {
   const [amount, setAmount] = useState<string>('1');
   const [result, setResult] = useState<number | null>(null);
   const { rates } = useExchangeRates();
-  const { fromCurrency, toCurrency, setFromCurrency, setToCurrency } = useCurrencyContext();
+  const {
+    fromCurrency,
+    toCurrency,
+    setFromCurrency,
+    setToCurrency,
+  } = useCurrencyContext();
 
-  const openCurrencySelection = (type: 'from' | 'to') => {
-    navigation.navigate('SelectCurrency', { type });
-  };
+  const { convertCurrency } = useCurrencyConversion(rates);
 
-  const convert = () => {
-    if (!rates || !fromCurrency || !toCurrency) return;
-    const numericAmount = parseFloat(amount);
-    if (isNaN(numericAmount)) return;
-
-    const fromRate = rates[fromCurrency.code];
-    const toRate = rates[toCurrency.code];
-
-    if (!fromRate || !toRate) {
-      console.error('Одна из валют не найдена в курсах:', fromCurrency.code, toCurrency.code);
-      return;
-    }
-
-    const resultValue = (toRate / fromRate) * numericAmount;
-    setResult(resultValue);
-  };
-
-  const swapCurrencies = () => {
+  // Memoized function to handle currency swap
+  const handleSwapCurrencies = useCallback(() => {
     if (fromCurrency && toCurrency) {
       setFromCurrency(toCurrency);
       setToCurrency(fromCurrency);
       setResult(null);
     }
-  };
+  }, [fromCurrency, toCurrency]);
 
-  const getFlagUrl = (currencyCode: string): string => {
-    const countryCode = currencyToCountryMap[currencyCode];
-    return countryCode ? `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png` : '';
-  };
+  // Trigger conversion when any input or context value changes
+  useEffect(() => {
+    if (!rates || !fromCurrency || !toCurrency) return;
 
-  const renderCurrencyButton = (type: 'from' | 'to') => {
-    const currency = type === 'from' ? fromCurrency : toCurrency;
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount)) return;
 
-    return (
-      <TouchableOpacity
-        style={styles.currencyButton}
-        onPress={() => openCurrencySelection(type)}
-      >
-        {currency && (
-          <Image
-            source={{ uri: getFlagUrl(currency.code) }}
-            style={styles.flag}
-          />
-        )}
-        <Text style={styles.currencyText}>
-          {currency ? `${currency.symbol}` : type === 'from' ? 'From' : 'To'}
-        </Text>
-        <Text style={styles.arrow}>▼</Text>
-      </TouchableOpacity>
-    );
-  };
+    const resultValue = convertCurrency(fromCurrency.code, toCurrency.code, numericAmount);
+    if (resultValue !== null) {
+      setResult(resultValue);
+    }
+  }, [amount, fromCurrency, toCurrency, rates]);
+
+  // Navigate to currency selector screen
+  const openCurrencySelection = useCallback((type: 'from' | 'to') => {
+    navigation.navigate('SelectCurrency', { type });
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Сумма:</Text>
+      <View style={styles.row}>
+        <View>
+          <Text style={styles.label}>From:</Text>
+          <CurrencyButton type="from" currency={fromCurrency} onPress={openCurrencySelection} />
+        </View>
+
+        <TouchableOpacity onPress={handleSwapCurrencies} style={styles.swapButton}>
+          <Text style={styles.swapText}>⇄</Text>
+        </TouchableOpacity>
+
+        <View>
+          <Text style={styles.label}>To:</Text>
+          <CurrencyButton type="to" currency={toCurrency} onPress={openCurrencySelection} />
+        </View>
+      </View>
+
+      <Text style={styles.label}>Amount:</Text>
       <TextInput
         style={styles.input}
         keyboardType="numeric"
         value={amount}
-        onChangeText={setAmount}
+        onChangeText={(text) => setAmount(sanitizeAmount(text))}
       />
-
-      <View style={styles.row}>
-        {renderCurrencyButton('from')}
-        <TouchableOpacity onPress={swapCurrencies} style={styles.swapButton}>
-          <Text style={styles.swapText}>⇄</Text>
-        </TouchableOpacity>
-        {renderCurrencyButton('to')}
-      </View>
-
-      <TouchableOpacity
-        style={[
-          styles.convertButton,
-          (!fromCurrency || !toCurrency) && styles.disabledButton,
-        ]}
-        onPress={convert}
-        disabled={!fromCurrency || !toCurrency}
-      >
-        <Text style={styles.convertText}>Convert</Text>
-      </TouchableOpacity>
 
       {result !== null && (
         <Text style={styles.result}>
@@ -119,15 +95,18 @@ export default function CurrencyConverterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center' },
+  container: { flex: 1, padding: 20, justifyContent: 'center', backgroundColor: '#f5f5f5' },
   label: { fontSize: 18, marginBottom: 8 },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#000',
     borderRadius: 8,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     fontSize: 18,
     marginBottom: 20,
+    backgroundColor: '#fff',
+    color: '#000',
   },
   row: {
     flexDirection: 'row',
@@ -135,48 +114,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 20,
   },
-  currencyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: '#f4f4f4',
-    minWidth: 110,
-  },
-  currencyText: {
-    fontSize: 16,
-    marginHorizontal: 8,
-  },
-  arrow: {
-    fontSize: 16,
-    color: '#888',
-  },
-  flag: {
-    width: 26,
-    height: 18,
-    borderRadius: 2,
-  },
   swapButton: {
     paddingHorizontal: 12,
   },
   swapText: {
     fontSize: 24,
-  },
-  convertButton: {
-    backgroundColor: '#007bff',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  disabledButton: {
-    backgroundColor: '#aaa',
-  },
-  convertText: {
-    color: '#fff',
-    fontSize: 18,
   },
   result: {
     marginTop: 24,

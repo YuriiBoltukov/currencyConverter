@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { CurrencyItem } from '../types/currency';
+import { FormattedCurrency }                      from '../types/currency';
 
 interface CurrencyContextType {
-  fromCurrency: CurrencyItem | null;
-  toCurrency: CurrencyItem | null;
-  setFromCurrency: (currency: CurrencyItem) => void;
-  setToCurrency: (currency: CurrencyItem) => void;
+  fromCurrency: FormattedCurrency | null;
+  toCurrency: FormattedCurrency | null;
+  setFromCurrency: (currency: FormattedCurrency) => void;
+  setToCurrency: (currency: FormattedCurrency) => void;
 }
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
@@ -17,8 +17,8 @@ export const useCurrencyContext = () => {
 };
 
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
-  const [fromCurrency, setFromCurrency] = useState<CurrencyItem | null>(null);
-  const [toCurrency, setToCurrency] = useState<CurrencyItem | null>(null);
+  const [fromCurrency, setFromCurrency] = useState<FormattedCurrency | null>(null);
+  const [toCurrency, setToCurrency] = useState<FormattedCurrency | null>(null);
 
   return (
     <CurrencyContext.Provider
