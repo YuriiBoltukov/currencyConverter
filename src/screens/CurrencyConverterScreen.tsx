@@ -116,6 +116,8 @@ const styles = StyleSheet.create({
   },
   swapButton: {
     paddingHorizontal: 12,
+    alignSelf: 'flex-end',
+    marginBottom: 8,
   },
   swapText: {
     fontSize: 24,
