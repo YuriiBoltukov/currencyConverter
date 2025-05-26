@@ -28,13 +28,15 @@ export default function CurrencyConverterScreen() {
     setFromCurrency,
     setToCurrency,
   } = useCurrencyContext();
-  const { rates, loading } = useExchangeRates(fromCurrency?.code || null);
+  console.log(fromCurrency, toCurrency);
+  const { rates, error } = useExchangeRates(fromCurrency?.code || null);
   const { convertCurrency } = useCurrencyConversion(rates);
 
-  if (loading) {
+
+  if (error) {
     return (
       <View style={styles.container}>
-        <Text>Loading exchange rates...</Text>
+        <Text>Ошибка при загрузке данных: {error}</Text>
       </View>
     );
   }

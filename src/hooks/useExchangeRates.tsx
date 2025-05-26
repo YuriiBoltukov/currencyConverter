@@ -12,7 +12,7 @@ export interface RatesResponse {
   date: string;
 }
 
-export function useExchangeRates(base: string | null) {
+export function useExchangeRates(base = "USD") {
   const [rates, setRates] = useState<Record<string, number> | null>(null);
   const [currencies, setCurrencies] = useState<CurrenciesResponse | null>(null);
   const [loading, setLoading] = useState(true);
